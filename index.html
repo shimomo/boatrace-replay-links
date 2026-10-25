@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ボートレース リプレイリンク</title>
+<style>
+  :root {
+    --bg: #f7f8fa; --fg: #1d2330; --muted: #5d6677; --card: #ffffff;
+    --line: #d9dde5; --accent: #0b5fff; --accent-fg: #ffffff; --warn: #8a5a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --fg: #e8ebf0; --muted: #9aa3b2; --card: #1b2029;
+      --line: #2e3542; --accent: #5b92ff; --accent-fg: #0b1020; --warn: #e0b45a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 4px; }
+  .row { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 560px) { .row { grid-template-columns: 1fr 1.4fr 1fr; } }
+  input, select, button {
+    font: inherit; color: inherit; width: 100%; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+  }
+  button { width: auto; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .status { min-height: 1.4em; margin: 10px 0 0; font-size: .9rem; color: var(--muted); }
+  .status.warn { color: var(--warn); }
+  .result { display: none; }
+  .result.show { display: block; }
+  .result h2 { font-size: 1rem; margin: 0 0 8px; }
+  .url {
+    word-break: break-all; font: .8rem/1.5 ui-monospace, monospace;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  }
+  .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .actions a {
+    display: inline-block; padding: 8px 14px; border-radius: 8px; text-decoration: none;
+    background: var(--accent); color: var(--accent-fg);
+  }
+  .notes { font-size: .85rem; color: var(--muted); }
+  .notes li { margin-bottom: 4px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>ボートレース リプレイリンク</h1>
+  <p class="lead">日付・場・レース番号から、公式配信サービス BOATCAST のリプレイ映像へのリンクを作ります。映像は BOATCAST 側のページで再生されます（このページには埋め込みません）。</p>
+
+  <section class="card">
+    <div class="row">
+      <div>
+        <label for="date">日付</label>
+        <input id="date" type="date" min="2020-01-01">
+      </div>
+      <div>
+        <label for="stadium">場</label>
+        <select id="stadium"></select>
+      </div>
+      <div>
+        <label for="race">レース</label>
+        <select id="race"></select>
+      </div>
+    </div>
+    <p id="status" class="status" role="status"></p>
+  </section>
+
+  <section id="result" class="card result" aria-live="polite">
+    <h2 id="resultTitle"></h2>
+    <div id="url" class="url"></div>
+    <div class="actions">
+      <a id="open" href="#" target="_blank" rel="noopener noreferrer">BOATCAST で開く</a>
+      <button id="copy" type="button">URLをコピー</button>
+    </div>
+  </section>
+
+  <section class="card notes">
+    <ul>
+      <li>確認できた範囲では、映像は <strong>2020-01-01 以降</strong>のレースです。それより前の日付は選べません。</li>
+      <li>映像の保存期間は BOATCAST 側の都合で変わる可能性があります。見られないレースがあることもあります。</li>
+      <li>開催場の一覧は <a href="https://github.com/boatraceopenapi/programs" target="_blank" rel="noopener noreferrer">boatraceopenapi/programs</a> の出走表データから取得しています（更新は数時間遅れることがあります）。取得できない日は全24場から手動で選べます。</li>
+      <li>非公式のリンク作成ツールです。公式の <a href="https://boatcast.jp/" target="_blank" rel="noopener noreferrer">BOATCAST</a> とは関係ありません。</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+// --- pure ---
+const MIN_DATE = "2020-01-01";
+
+const STADIUMS = {
+  1: ["01kiryu", "桐生"], 2: ["02toda", "戸田"], 3: ["03edogawa", "江戸川"],
+  4: ["04heiwajima", "平和島"], 5: ["05tamagawa", "多摩川"], 6: ["06hamanako", "浜名湖"],
+  7: ["07gamagori", "蒲郡"], 8: ["08tokoname", "常滑"], 9: ["09tsu", "津"],
+  10: ["10mikuni", "三国"], 11: ["11biwako", "びわこ"], 12: ["12suminoe", "住之江"],
+  13: ["13amagasaki", "尼崎"], 14: ["14naruto", "鳴門"], 15: ["15marugame", "丸亀"],
+  16: ["16kojima", "児島"], 17: ["17miyajima", "宮島"], 18: ["18tokuyama", "徳山"],
+  19: ["19shimonoseki", "下関"], 20: ["20wakamatsu", "若松"], 21: ["21ashiya", "芦屋"],
+  22: ["22fukuoka", "福岡"], 23: ["23karatsu", "唐津"], 24: ["24omura", "大村"],
+};
+
+// date: "YYYY-MM-DD", stadium: 1-24, race: 1-12
+function replayUrl(date, stadium, race) {
+  const s = STADIUMS[stadium];
+  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !(race >= 1 && race <= 12)) return null;
+  const params = new URLSearchParams({
+    service: "boatcast",
+    stadium: s[0],
+    raceType: "race",
+    raceDate: date.replaceAll("-", ""),
+    raceNumber: String(race).padStart(2, "0"),
+    autoplay: "0",
+    bitrate: "low",
+  });
+  return "https://front.player.boatrace-cdn.jp/player/vod?" + params.toString();
+}
+
+function programsUrl(date) {
+  return "https://boatraceopenapi.github.io/programs/v3/" + date.slice(0, 4) + "/" +
+    date.replaceAll("-", "") + ".json";
+}
+
+// programs[] -> { [stadium_number]: { [race_number]: program } }
+function indexPrograms(programs) {
+  const out = {};
+  for (const p of programs) {
+    (out[p.stadium_number] ??= {})[p.number] = p;
+  }
+  return out;
+}
+// --- /pure ---
+
+const $ = (id) => document.getElementById(id);
+const dateEl = $("date"), stadiumEl = $("stadium"), raceEl = $("race");
+const statusEl = $("status"), resultEl = $("result");
+
+let held = null; // null = 開催情報なし（手動選択）, object = 取得済み
+let loadSeq = 0;
+
+function todayJst() {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+}
+
+function setStatus(text, warn = false) {
+  statusEl.textContent = text;
+  statusEl.classList.toggle("warn", warn);
+}
+
+function fillStadiums() {
+  const prev = stadiumEl.value;
+  stadiumEl.replaceChildren();
+  for (const [no, [, name]] of Object.entries(STADIUMS)) {
+    const o = document.createElement("option");
+    o.value = no;
+    const h = held && held[no];
+    o.textContent = name + (h ? "（" + (Object.values(h)[0].title || "") + "）" : "");
+    if (held && !h) {
+      o.disabled = true;
+      o.textContent = name + "（開催なし）";
+    }
+    stadiumEl.append(o);
+  }
+  const ok = [...stadiumEl.options].find((o) => o.value === prev && !o.disabled);
+  stadiumEl.value = ok ? prev : ([...stadiumEl.options].find((o) => !o.disabled) || stadiumEl.options[0]).value;
+}
+
+function fillRaces() {
+  const prev = raceEl.value;
+  raceEl.replaceChildren();
+  const races = held && held[stadiumEl.value];
+  for (let r = 1; r <= 12; r++) {
+    const o = document.createElement("option");
+    o.value = String(r);
+    const p = races && races[r];
+    o.textContent = r + "R" + (p && p.subtitle ? "  " + p.subtitle : "");
+    if (races && !p) o.disabled = true;
+    raceEl.append(o);
+  }
+  const ok = [...raceEl.options].find((o) => o.value === prev && !o.disabled);
+  raceEl.value = ok ? prev : ([...raceEl.options].find((o) => !o.disabled) || raceEl.options[0]).value;
+}
+
+function render() {
+  const date = dateEl.value;
+  const stadium = Number(stadiumEl.value);
+  const race = Number(raceEl.value);
+  const inRange = date >= MIN_DATE && date <= todayJst();
+  const url = date && inRange ? replayUrl(date, stadium, race) : null;
+  resultEl.classList.toggle("show", !!url);
+  if (!url) return;
+  $("resultTitle").textContent = date + "  " + STADIUMS[stadium][1] + " " + race + "R";
+  $("url").textContent = url;
+  $("open").href = url;
+}
+
+async function loadDay() {
+  const date = dateEl.value;
+  const seq = ++loadSeq;
+  held = null;
+  if (!date || date < MIN_DATE) {
+    setStatus("2020-01-01 以降の日付を選んでください。", true);
+    fillStadiums(); fillRaces(); render();
+    return;
+  }
+  if (date > todayJst()) {
+    setStatus("未来の日付です。", true);
+    fillStadiums(); fillRaces(); render();
+    return;
+  }
+  setStatus("開催場を取得中…");
+  try {
+    const res = await fetch(programsUrl(date));
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const json = await res.json();
+    if (seq !== loadSeq) return;
+    held = indexPrograms(json.programs || []);
+    const n = Object.keys(held).length;
+    if (n === 0) throw new Error("開催なし");
+    setStatus(n + "場で開催されていました。");
+  } catch (e) {
+    if (seq !== loadSeq) return;
+    held = null;
+    setStatus("開催情報を取得できませんでした（" + e.message + "）。全24場から手動で選べます。", true);
+  }
+  fillStadiums(); fillRaces(); render();
+}
+
+dateEl.addEventListener("change", loadDay);
+stadiumEl.addEventListener("change", () => { fillRaces(); render(); });
+raceEl.addEventListener("change", render);
+$("copy").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText($("url").textContent);
+    setStatus("URLをコピーしました。");
+  } catch {
+    setStatus("コピーできませんでした。URLを手動で選択してください。", true);
+  }
+});
+
+// 初期値は昨日（当日のレースは出走表データの反映が遅れるため）
+(function init() {
+  const d = new Date(todayJst() + "T00:00:00+09:00");
+  d.setDate(d.getDate() - 1);
+  const y = d.toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+  dateEl.max = todayJst();
+  dateEl.value = y < MIN_DATE ? MIN_DATE : y;
+  loadDay();
+})();
+</script>
+</body>
+</html>
