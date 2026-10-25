@@ -5,3 +5,7 @@
 - 映像は埋め込まず、BOATCAST の再生ページを新しいタブで開きます。
 - 開催場の一覧は [boatraceopenapi/programs](https://github.com/boatraceopenapi/programs) の出走表データから取得します。
 - 非公式のツールで、BOATCAST とは関係ありません。
+
+## ライセンス
+
+[MIT License](LICENSE)
