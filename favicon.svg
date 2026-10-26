@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .bg { fill: #0b5fff; }
+    @media (prefers-color-scheme: dark) { .bg { fill: #5b92ff; } }
+  </style>
+  <rect class="bg" width="64" height="64" rx="14"/>
+  <path d="M24 12 L24 38 L46 25 Z" fill="#fff"/>
+  <path d="M8 47 Q16 40 24 47 T40 47 T56 47" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+  <path d="M8 57 Q16 50 24 57 T40 57 T56 57" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="4" stroke-linecap="round"/>
+</svg>
