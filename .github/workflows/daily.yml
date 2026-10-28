@@ -1,0 +1,29 @@
+name: daily
+
+on:
+  schedule:
+    - cron: "0 22 * * *" # 07:00 JST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test
+      - run: node scripts/build.mjs --source http --from 2020-01-01 --missing-only
+      - name: Commit new files
+        run: |
+          if [ -n "$(git status --porcelain api)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add api
+            git commit -m "chore: 日次JSONを追加する"
+            git push
+          fi
