@@ -1,0 +1,8 @@
+{
+  "name": "boatrace-replay-links",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
