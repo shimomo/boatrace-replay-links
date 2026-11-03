@@ -7,6 +7,9 @@
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12151b" media="(prefers-color-scheme: dark)">
 <style>
   :root {
     --bg: #f7f8fa; --fg: #1d2330; --muted: #5d6677; --card: #ffffff;
@@ -267,6 +270,10 @@ $("copy").addEventListener("click", async () => {
   dateEl.value = y < MIN_DATE ? MIN_DATE : y;
   loadDay();
 })();
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 </script>
 </body>
 </html>
